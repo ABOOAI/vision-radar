@@ -2,152 +2,176 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VISION 幻视雷达 | 2026 旗舰版</title>
     <style>
-        /* --- 核心：雷达背景设计 --- */
+        :root {
+            --primary-green: #00ff40;
+            --accent-pink: #eb007f;
+            --bg-dark: #020603;
+            --glass-bg: rgba(8, 13, 9, 0.7);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; cursor: crosshair; }
         
         body {
             width: 100vw; height: 100vh;
-            background-color: #020603; /* 深邃的绿黑底色 */
-            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: var(--bg-dark);
+            font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
             overflow: hidden; color: #fff;
             position: relative;
         }
 
-        /* 雷达静态网格层 */
+        /* --- 背景层优化 --- */
         .radar-grid {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 1; pointer-events: none;
             background-image: 
-                linear-gradient(rgba(0, 255, 64, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 255, 64, 0.03) 1px, transparent 1px);
-            background-size: 60px 60px;
+                linear-gradient(rgba(0, 255, 64, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 64, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            mask-image: radial-gradient(circle, black 30%, transparent 80%);
         }
 
-        /* 雷达扫描 Canvas 层 */
+        /* 模拟扫描线滤镜 */
+        body::before {
+            content: "";
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 3px 100%;
+            z-index: 20; pointer-events: none;
+        }
+
         #radar-canvas {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 2; pointer-events: none;
-            opacity: 0.6; /* 调整扫描亮度 */
+            z-index: 2; opacity: 0.8;
         }
 
-        /* 背景中心发光 */
-        .bg-glow {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 50%, rgba(0, 255, 64, 0.04) 0%, transparent 70%);
-            z-index: 3; pointer-events: none;
-        }
-
-        /* --- 主 UI 内容区 --- */
+        /* --- 主 UI 容器 --- */
         .main-ui { 
             position: relative; z-index: 10; width: 100%; height: 100%; 
             display: flex; justify-content: center; align-items: center; 
-            transition: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
         }
         
-        /* 状态切换：点击验证后主屏缩放 blur */
-        .main-ui.active { transform: scale(0.85); filter: blur(12px); opacity: 0.2; }
+        .main-ui.active { transform: scale(0.92); filter: blur(20px); opacity: 0.3; }
 
-        .content-wrapper { position: relative; padding: 120px; text-align: center; }
+        .content-wrapper { 
+            position: relative; 
+            width: 90%; max-width: 1200px;
+            padding: 2rem;
+            text-align: center; 
+        }
 
-        /* --- 保留：四角环绕文字排版 --- */
+        /* --- 角部装饰：自动适配间距 --- */
         .slogan-tag { 
-            position: absolute; font-size: 14px; color: rgba(255, 255, 255, 0.5); 
-            letter-spacing: 4px; display: flex; flex-direction: column; align-items: center;
+            position: absolute; font-size: clamp(10px, 2vw, 14px); 
+            color: rgba(255, 255, 255, 0.4); 
+            letter-spacing: 2px; display: flex; flex-direction: column; align-items: center;
+            text-transform: uppercase;
         }
-        /* 装饰小线条 */
         .slogan-tag::after {
-            content: ''; width: 1px; height: 35px;
-            background: linear-gradient(to bottom, #00ff00, transparent);
-            margin-top: 10px;
+            content: ''; width: 1px; height: 30px;
+            background: linear-gradient(to bottom, var(--primary-green), transparent);
+            margin-top: 8px;
         }
 
-        .tag-tl { top: 0; left: 0; }
-        .tag-tr { top: 0; right: 0; }
-        .tag-bl { bottom: 0; left: 0; flex-direction: column-reverse; } /* 线条向上 */
-        .tag-bl::after { margin-bottom: 10px; background: linear-gradient(to top, #00ff00, transparent); }
-        .tag-br { bottom: 0; right: 0; flex-direction: column-reverse; } /* 线条向上 */
-        .tag-br::after { margin-bottom: 10px; background: linear-gradient(to top, #00ff00, transparent); }
+        .tag-tl { top: -20px; left: 0; }
+        .tag-tr { top: -20px; right: 0; }
+        .tag-bl { bottom: -20px; left: 0; flex-direction: column-reverse; }
+        .tag-bl::after { margin: 0 0 8px 0; background: linear-gradient(to top, var(--primary-green), transparent); }
+        .tag-br { bottom: -20px; right: 0; flex-direction: column-reverse; }
+        .tag-br::after { margin: 0 0 8px 0; background: linear-gradient(to top, var(--primary-green), transparent); }
 
-        /* Logo 核心区域 */
-        .logo-area { display: flex; align-items: center; justify-content: center; margin-bottom: 50px; }
-        .vision-text { font-size: 80px; font-weight: bold; letter-spacing: 5px; color: #fff; }
+        /* --- Logo 区域优化 --- */
+        .logo-area { 
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: center; 
+            margin-bottom: clamp(30px, 8vh, 60px); 
+        }
+        .vision-text { 
+            font-size: clamp(40px, 10vw, 90px); 
+            font-weight: 900; letter-spacing: -2px; color: #fff; 
+            background: linear-gradient(180deg, #fff 40%, #888 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
         .pink-dot { 
-            width: 12px; height: 12px; background: #eb007f; border-radius: 50%; 
-            margin: 0 25px; box-shadow: 0 0 20px #eb007f; 
+            width: clamp(8px, 1.5vw, 15px); height: clamp(8px, 1.5vw, 15px); 
+            background: var(--accent-pink); border-radius: 50%; 
+            margin: 0 clamp(15px, 3vw, 30px); 
+            box-shadow: 0 0 30px var(--accent-pink); 
             animation: pulse 2s infinite; 
         }
         .huanshi-text { 
-            font-size: 75px; color: #00ff00; font-weight: bold; 
-            letter-spacing: 10px; text-shadow: 0 0 25px rgba(0,255,0,0.6); 
+            font-size: clamp(35px, 9vw, 85px); color: var(--primary-green); font-weight: bold; 
+            letter-spacing: clamp(5px, 1vw, 12px); 
+            text-shadow: 0 0 30px rgba(0,255,64,0.5); 
         }
         
-        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.7; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.3); filter: brightness(1.5); } }
 
-        /* 按钮组 */
-        .btn-group { display: flex; gap: 30px; justify-content: center; }
+        /* --- 按钮优化 --- */
+        .btn-group { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
         .btn {
-            padding: 16px 50px; border-radius: 50px; background: rgba(0,0,0,0.6); 
-            border: 1px solid transparent; color: #fff; text-decoration: none; 
-            font-size: 18px; transition: 0.4s; backdrop-filter: blur(10px);
-            cursor: pointer; position: relative; overflow: hidden;
+            padding: 14px 45px; border-radius: 4px; background: rgba(255,255,255,0.03); 
+            border: 1px solid rgba(255,255,255,0.1); color: #fff; text-decoration: none; 
+            font-size: 16px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(5px); cursor: pointer; position: relative;
+            overflow: hidden; letter-spacing: 2px;
         }
-        /* 扫光动画 */
-        .btn::after {
-            content: ''; position: absolute; top: -50%; left: -100%; width: 50%; height: 200%;
-            background: linear-gradient(to right, transparent, rgba(255,255,255,0.2), transparent);
-            transform: rotate(30deg); animation: shine 4s infinite;
-        }
-        @keyframes shine { 0% { left: -100%; } 20% { left: 150%; } 100% { left: 150%; } }
-
-        .btn-verify { border-color: #eb007f; box-shadow: 0 0 15px rgba(235,0,127,0.3); }
-        .btn-verify:hover { background: #eb007f; color: #fff; box-shadow: 0 0 40px #eb007f; }
         
-        .btn-download { border-color: #00ff00; box-shadow: 0 0 15px rgba(0,255,64,0.2); }
-        .btn-download:hover { background: #00ff00; color: #000; box-shadow: 0 0 40px #00ff00; }
+        .btn::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: 0.5s;
+        }
+        .btn:hover::before { left: 100%; }
 
-        /* --- 验证终端弹出覆盖层 --- */
+        .btn-verify { border-color: var(--accent-pink); color: var(--accent-pink); }
+        .btn-verify:hover { background: var(--accent-pink); color: #fff; box-shadow: 0 0 30px var(--accent-pink); }
+        
+        .btn-download { border-color: var(--primary-green); color: var(--primary-green); }
+        .btn-download:hover { background: var(--primary-green); color: #000; box-shadow: 0 0 30px var(--primary-green); }
+
+        /* --- 验证终端弹窗 --- */
         .verify-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 100; display: none; 
             flex-direction: column; justify-content: center; align-items: center;
         }
-        .overlay-mask { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(20px); z-index: -1; }
+        .overlay-mask { position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px); }
 
         .verify-card {
-            width: 460px; background: #080d09; border: 1px solid rgba(0, 255, 64, 0.2);
-            padding: 50px; text-align: center; border-radius: 20px;
-            box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 20px rgba(0,255,64,0.1);
-            animation: cardSlideIn 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+            position: relative; width: 90%; max-width: 440px; 
+            background: var(--glass-bg); border: 1px solid rgba(0, 255, 64, 0.2);
+            padding: clamp(30px, 5vw, 50px); text-align: center; border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            animation: cardIn 0.5s forwards;
         }
-        @keyframes cardSlideIn { from { opacity:0; transform: translateY(50px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes cardIn { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-        .verify-title { color: #eb007f; font-size: 20px; letter-spacing: 6px; margin-bottom: 30px; font-weight: bold; text-transform: uppercase; }
-        
-        /* 备用直达区 */
-        .fallback-box {
-            margin-top: 35px; padding-top: 25px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+        .verify-title { color: var(--accent-pink); font-size: 18px; letter-spacing: 5px; margin-bottom: 25px; font-weight: bold; }
+        .link-text { color: var(--primary-green); text-decoration: none; font-size: 13px; opacity: 0.8; transition: 0.3s; }
+        .link-text:hover { opacity: 1; text-shadow: 0 0 10px var(--primary-green); }
+
+        @media (max-width: 600px) {
+            .slogan-tag { display: none; } /* 移动端隐藏角标以保持清爽 */
+            .btn { width: 100%; padding: 12px 0; }
+            .btn-group { width: 100%; flex-direction: column; }
         }
-        .link-text { color: #00ff40; text-decoration: underline; font-size: 13px; cursor: pointer; transition: 0.3s; opacity: 0.7; }
-        .link-text:hover { opacity: 1; text-shadow: 0 0 10px #00ff40; }
-
     </style>
 </head>
 <body>
 
     <div class="radar-grid"></div>
     <canvas id="radar-canvas"></canvas>
-    <div class="bg-glow"></div>
 
     <div class="main-ui" id="mainUI">
         <div class="content-wrapper">
-            <div class="slogan-tag tag-tl">极速响应 // 01</div>
-            <div class="slogan-tag tag-tr">毫秒现形 // 02</div>
-            <div class="slogan-tag tag-bl">多重防护 // 03</div>
-            <div class="slogan-tag tag-br">稳如磐石 // 04</div>
+            <div class="slogan-tag tag-tl">Ultra Response // 01</div>
+            <div class="slogan-tag tag-tr">Real-time Vision // 02</div>
+            <div class="slogan-tag tag-bl">Multi-Shield // 03</div>
+            <div class="slogan-tag tag-br">Stable Kernel // 04</div>
 
             <div class="logo-area">
                 <div class="vision-text">VISION</div>
@@ -156,8 +180,8 @@
             </div>
 
             <div class="btn-group">
-                <div class="btn btn-verify" onclick="toggleOverlay(true)">验证卡密</div>
-                <a href="#" class="btn btn-download">下载教程</a>
+                <div class="btn btn-verify" onclick="toggleOverlay(true)">验证卡密密钥</div>
+                <a href="#" class="btn btn-download">下载使用教程</a>
             </div>
         </div>
     </div>
@@ -166,29 +190,27 @@
         <div class="overlay-mask" onclick="toggleOverlay(false)"></div>
         <div class="verify-card">
             <div class="verify-title">SECURITY TERMINAL</div>
-            
-            <p style="color: #999; margin-bottom: 35px; font-size: 14px; line-height: 1.6; padding: 0 10px;">
-                系统初始化完成。点击下方按钮将载入验证窗口。<br>
-                <span style="color: #eb007f; font-weight: bold;">若被浏览器拦截（点击无效），请使用直达链接。</span>
+            <p style="color: #aaa; margin-bottom: 30px; font-size: 14px; line-height: 1.8;">
+                安全防护系统已就绪。<br>请在弹出的新窗口中完成身份校验。<br>
+                <span style="color: var(--accent-pink); font-size: 12px;">* 若无反应请检查浏览器拦截设置</span>
             </p>
             
-            <div class="btn btn-verify" style="display: block; width: 100%; margin-bottom: 25px;" onclick="attemptOpenWin()">
-                启动验证窗口
+            <div class="btn btn-verify" style="display: block; width: 100%; margin-bottom: 25px; border-radius: 4px;" onclick="attemptOpenWin()">
+                立即启动验证
             </div>
 
-            <div class="fallback-box">
-                <p style="font-size: 12px; color: #666; margin-bottom: 12px;">弹窗遭拦截？尝试备用方案：</p>
-                <a href="http://ayuuyy.lewhqh.cn/59188" target="_blank" class="link-text">直接在本窗口打开 (直达)</a>
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); pt: 20px;">
+                <p style="font-size: 12px; color: #666; margin: 15px 0 10px;">拦截备份方案：</p>
+                <a href="http://ayuuyy.lewhqh.cn/59188" target="_blank" class="link-text">点击此处直达验证主页 >></a>
             </div>
 
-            <div style="margin-top: 40px; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer;" onclick="toggleOverlay(false)">
-                [ 返回主界面 ]
+            <div style="margin-top: 35px; font-size: 11px; color: rgba(255,255,255,0.2); cursor: pointer;" onclick="toggleOverlay(false)">
+                ESC / CLOSE
             </div>
         </div>
     </div>
 
     <script>
-        // --- 交互逻辑 ---
         function toggleOverlay(show) {
             const ui = document.getElementById('mainUI');
             const overlay = document.getElementById('verifyOverlay');
@@ -202,20 +224,15 @@
         }
 
         function attemptOpenWin() {
-            // 尝试开启弹出窗口（模拟程序直达）
-            const win = window.open('http://ayuuyy.lewhqh.cn/59188', 'VisionTerminal', 'width=450,height=600,top=100,left=100,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
-            
-            // 检查是否被拦截
-            if(!win || win.closed || typeof win.closed == 'undefined') {
-                // 拦截后，不关闭面板，让用户使用备用链接
-                alert('弹窗被浏览器拦截，请点击面板下方的“直达链接”直接打开。');
+            const win = window.open('http://ayuuyy.lewhqh.cn/59188', 'VisionTerminal', 'width=480,height=650,top=100,left=100');
+            if(!win || win.closed) {
+                alert('窗口被浏览器拦截，请点击下方的直达链接。');
             } else {
-                // 成功弹出，关闭面板
                 toggleOverlay(false);
             }
         }
 
-        // --- 核心背景：雷达扫描 Canvas 动效 ---
+        // --- 进阶版雷达 Canvas ---
         const canvas = document.getElementById('radar-canvas');
         const ctx = canvas.getContext('2d');
         let w, h, angle = 0, targets = [];
@@ -223,74 +240,82 @@
         function resize() {
             w = canvas.width = window.innerWidth;
             h = canvas.height = window.innerHeight;
-            // 重新初始化目标点，使其分布在新视口内
             initTargets();
         }
 
         function initTargets() {
-            targets = [];
-            // 生成一些随机的雷达“目标点”
-            for(let i=0; i<6; i++) {
-                targets.push({
-                    x: Math.random() * w,
-                    y: Math.random() * h,
-                    opacity: Math.random(), // 初始透明度
-                    life: Math.random() * 100 + 100 // 生命周期
-                });
-            }
+            targets = Array.from({length: 8}, () => ({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                size: Math.random() * 2 + 1,
+                opacity: 0,
+                active: false
+            }));
         }
 
         function drawRadar() {
-            ctx.clearRect(0,0,w,h);
-            const cx = w/2, cy = h/2, maxR = Math.hypot(w,h);
+            ctx.clearRect(0, 0, w, h);
+            const cx = w/2, cy = h/2;
+            const radius = Math.max(w, h) * 0.7;
 
-            // 1. 绘制缓慢旋转的扫描扇形 (Cyber Green)
+            // 绘制雷达静态圆环
+            ctx.strokeStyle = 'rgba(0, 255, 64, 0.05)';
+            ctx.lineWidth = 1;
+            for(let r = 100; r < radius; r += 150) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // 绘制扫描扇形
             ctx.save();
             ctx.translate(cx, cy);
             ctx.rotate(angle);
             
-            // 创建径向渐变，形成余辉效果
-            let grad = ctx.createRadialGradient(0,0,0,0,0, maxR);
-            grad.addColorStop(0, 'rgba(0, 255, 64, 0.2)'); // 中心较亮
-            grad.addColorStop(0.5, 'rgba(0, 255, 64, 0.05)'); // 中间较淡
-            grad.addColorStop(1, 'transparent'); // 边缘透明
-
+            let grad = ctx.createConicGradient(0, 0, 0);
+            grad.addColorStop(0, 'rgba(0, 255, 64, 0.3)');
+            grad.addColorStop(0.1, 'rgba(0, 255, 64, 0.1)');
+            grad.addColorStop(0.2, 'transparent');
+            
             ctx.fillStyle = grad;
             ctx.beginPath();
-            ctx.moveTo(0,0);
-            // 弧度范围，形成扫描扇形
-            ctx.arc(0,0, maxR, 0, Math.PI / 3, false); 
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, radius, 0, Math.PI * 0.4);
             ctx.fill();
             ctx.restore();
 
-            // 扫描角度递增（控制旋转速度）
-            angle += 0.005; 
-
-            // 2. 绘制随机闪烁的雷达“目标点”
-            targets.forEach((t, i) => {
-                ctx.fillStyle = `rgba(0, 255, 64, ${t.opacity})`;
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, 1.5, 0, Math.PI*2);
-                ctx.fill();
+            // 绘制目标点 blips
+            targets.forEach(t => {
+                // 计算目标点相对于扫描线的角度
+                let targetAngle = Math.atan2(t.y - cy, t.x - cx);
+                if (targetAngle < 0) targetAngle += Math.PI * 2;
                 
-                // 目标点生命周期管理，模拟闪烁
-                t.life--;
-                if(t.life < 0) {
-                    targets[i] = { x: Math.random()*w, y: Math.random()*h, opacity: Math.random(), life: Math.random()*100 + 100 };
-                } else {
-                    // 随着时间推移改变透明度
-                    t.opacity += (Math.random()-0.5) * 0.1;
-                    if(t.opacity < 0) t.opacity = 0;
-                    if(t.opacity > 0.6) t.opacity = 0.6;
+                let currentScanAngle = angle % (Math.PI * 2);
+                let diff = currentScanAngle - targetAngle;
+
+                if (diff > 0 && diff < 0.1) {
+                    t.opacity = 1; // 被扫描到时点亮
                 }
+
+                if (t.opacity > 0) {
+                    ctx.fillStyle = `rgba(0, 255, 64, ${t.opacity})`;
+                    ctx.shadowBlur = 10 * t.opacity;
+                    ctx.shadowColor = '#00ff40';
+                    ctx.beginPath();
+                    ctx.rect(t.x, t.y, t.size, t.size); // 方形点更具数码感
+                    ctx.fill();
+                    t.opacity -= 0.005; // 缓慢熄灭
+                }
+                ctx.shadowBlur = 0;
             });
 
+            angle += 0.015; 
             requestAnimationFrame(drawRadar);
         }
 
         window.addEventListener('resize', resize);
-        resize(); // 初始化尺寸和目标点
-        drawRadar(); // 开始动画
+        resize();
+        drawRadar();
     </script>
 </body>
 </html>
